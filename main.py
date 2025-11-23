@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta  # <--- Updated Import
 import os
 
 class DuplicateVisitorError(Exception):
@@ -10,13 +10,11 @@ class EarlyEntryError(Exception):
 FILENAME = "visitors.txt"
 
 def ensure_file():
-    """Creates visitors.txt if it does not exist."""
     if not os.path.exists(FILENAME):
         with open(FILENAME, "w") as f:
-            pass # Create empty file
+            pass 
 
 def get_last_visitor():
-    """Returns the (name, timestamp) of the last visitor, or None."""
     if not os.path.exists(FILENAME):
         return None
     
@@ -26,7 +24,6 @@ def get_last_visitor():
     if not lines:
         return None
         
-    # Parse the last line: "Name | ISO_TIMESTAMP"
     last_line = lines[-1].strip()
     try:
         name, timestamp = last_line.split(" | ")
@@ -35,19 +32,26 @@ def get_last_visitor():
         return None
 
 def add_visitor(visitor_name):
-    """Adds a visitor if they are not a duplicate."""
     ensure_file()
     last_data = get_last_visitor()
+    current_time = datetime.now()
     
-    # Check for Duplicate Visitor
     if last_data:
-        last_name, _ = last_data
+        last_name, last_time_str = last_data
+        last_time = datetime.fromisoformat(last_time_str)
+        
+        # Rule 1: Duplicate Check
         if last_name == visitor_name:
             raise DuplicateVisitorError(f"{visitor_name} was the last visitor.")
+        
+        # Rule 2: 5-Minute Wait Check
+        time_diff = current_time - last_time
+        if time_diff < timedelta(minutes=5):
+            raise EarlyEntryError("Must wait 5 minutes between visitors.")
             
-    # Add new visitor
+    # Append to file
     with open(FILENAME, "a") as f:
-        f.write(f"{visitor_name} | {datetime.now().isoformat()}\n")
+        f.write(f"{visitor_name} | {current_time.isoformat()}\n")
 
 def main():
     ensure_file()
